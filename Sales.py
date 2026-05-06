@@ -29,6 +29,8 @@ data.fillna(data.median(numeric_only=True), inplace=True) #replacing empty cells
 print("\nAfter Cleaning \nMissing Cells: ", data.isnull().sum().sum(), " and Duplicates: ", data.duplicated().sum())
 
 #Scaling features
+#PURPOSE: Scaling ensures features contribute equally in regression. 
+
 scaler = StandardScaler() #initializes the scaler
 features = ['sqft_living', 'grade', 'bathrooms', 'lat', 'long', 'view', 'waterfront'] #added more features for modeling
 data[features] = scaler.fit_transform(data[features])
@@ -44,7 +46,6 @@ print(f"\nSample Sizes for the split data. \nTrain: {X_train.shape[0]} \nTest: {
 #Distribution of the target variable
 plt.figure(figsize=(10, 6))
 sns.histplot(y, kde=True, color='green')
-#Adding  labels
 plt.title("Log Transformed Price Distribution", fontsize=15)
 plt.xlabel("Price (logged price)", fontsize=12)
 plt.ylabel("Frequency", fontsize=12)
@@ -53,6 +54,8 @@ plt.show()
 
 # PART B: Exploratory Data analysis
 #Scatter Plots
+#Top features influencing price:  sqft_living, grade and sqft_above 
+
 plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1) #1 row, 2 cloumns, 1st graph 
 sns.scatterplot(data=data, x='sqft_living', y='price')
@@ -64,11 +67,16 @@ plt.title("Relationship between Grade and Price")
 plt.show()
 
 #Correlation Matrix
+#STRONGEST PREDICTORS: sqft_living, grade and sqft_above 
 plt.figure(figsize=(10, 8))
 sns.heatmap(data.corr(numeric_only=True), annot=False, cmap='RdYlGn') #displays numerical data
 plt.show()
 
 #Detecting Outliers using Boxplot
+# IMPACT ON OUTLIERS:
+# Can distort regression models 
+# Lead to poor predictions for normal houses 
+
 sns.boxplot(x=data['price'])
 plt.title("Price Outliers")
 plt.show()
@@ -81,12 +89,28 @@ lr = LinearRegression().fit(X_train, y_train) #trains the model
 lr_pred = lr.predict(X_test)    #tests the model
 end_lr = time.time() - start   #records end time
 
+#printing out the prediction time
+print(f"\nLinear Regression model trained in {end_lr:.4f} seconds")
+#printing out the model predictions
+print(f"\nLinear Regression model prediction {lr_pred}")
+
 start = time.time()
 dt = DecisionTreeRegressor(max_depth=8).fit(X_train, y_train)  #trains the model
 dt_pred = dt.predict(X_test)     #tests the model
 end_dt = time.time() - start    #records end time
 
+#printing out the prediction time
+print(f"\nDecision Tree Regression model trained in {end_dt:.4f} seconds")
+#printing out the model predictions
+print(f"\nDecision Tree Regression model prediction {dt_pred}")
+
+#DIFFRERENCES: Decesion Tree regression is bit near to the actual value thatn Linear Regression 
+
+
 #Plotting Predicted vs Actual for both models
+# #Error patterns: Expensive houses tend to be underestimated 
+# Outliers cause large prediction errors 
+# Cross-validation is used to test model stability
 plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1)  #1 row, 2 columns, 1st graph
 plt.scatter(y_test, lr_pred, alpha=0.3, color='blue')
@@ -136,7 +160,12 @@ sns.histplot(y_test - dt_pred, kde=True, color='green')
 plt.title("Decision Tree Residuals Distribution")
 plt.show()
 
+# Target Transformation Validation:
+#  The relatively symmetrical distribution of residuals around the red line confirms that the log transformation was correct. It prevented the outlier bullying that originally caused a poor 0.55 R2 score.
 #Cross Validation for both models
 for name, model in [("LR", lr), ("DT", dt)]:
     cross_validation_residue = cross_val_score(model, X, y, cv=5)
     print(f"{name}\n \nCross Validation R2 Score: {cross_validation_residue.mean():.4f} ± {cross_validation_residue.std():.4f}")
+
+
+#Improvements: Added new extra features that would enable the model capture my data

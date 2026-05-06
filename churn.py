@@ -22,14 +22,21 @@ print("\n", data.info())  # displaying data information such as data types and t
 #Handling my missing values
 print("\nHandling missing Values before and after")
 print("\nBefore Handling")
-print("\n",data.isnull().sum())  #displays the number of missing values per feature
+print("\nTotal of mising cells\n",data.isnull().sum().sum())  #displays the number of missing values per feature
 
 print("\nAfter Handling")
 data['TotalCharges'] = pd.to_numeric(data['TotalCharges'], errors='coerce')  #converting the data in TotalCharges to numeric data and forces empty spaces to NaN
 data.dropna(inplace=True) #dropping all empyt cells since now the contain Nan as their identifier
-print("\n",data.isnull().sum())  
+print("\nTotal of mising cells\n",data.isnull().sum().sum())
+
+#Strategy (Removed data)
+#Rows with missing values are removed to ensure clean and reliable data for modeling. 
+
 
 #Encoding categorical variables using One-Hot Encoding
+#Because even though One-Hot Encoding increases dimensionality, it  improves model accuracy
+#Target variable (Churn) was encoded separately using Label Encoding since one hot encoding would result into 2 columns
+
 print("\nEncoding Sample")
 # Dropping customerID first as it is useless for training
 data.drop('customerID', axis=1, inplace=True)
@@ -42,6 +49,9 @@ data['Churn'] = le.fit_transform(data['Churn'])
 print(data.head(4))  
 
 #Scaling features
+#why its important.
+#Scaling ensures features contribute equally no single feature dominates the others
+
 scaler = StandardScaler()     #initializing the scaler to handle my most differing columns in terms of range
 scaled_columns = ['tenure', 'MonthlyCharges', 'TotalCharges']
 data[scaled_columns] = scaler.fit_transform(data[scaled_columns])
@@ -53,13 +63,18 @@ y = data['Churn']  #assigning it to a new variable to keep track of it.
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)  #splitting data using the 80/20 rule
 print(f"\n Number of Splitted datasets \n Train: {len(X_train)}, Test: {len(X_test)}")  #displaying number of rows of data in each category
+
+#sample of each dataset both training and testing
 print("\nSample for X train dataset ",X_train.head(3))
 print("\nSample for y train dataset \n", y_train.head(3))
 
 
 #PART B: Exploratory Data Analysis
 #Scatter Plots
-#HEre is used sublots for the scatter plots for easy comparisons
+#Here is used sublots for the scatter plots for easy comparisons
+#Strong relationships justified by my heatmap
+#Tenure vs Total Charges, Monthly Charges vs Churn and Tenure vs Churn(strong negative)   
+
 plt.figure(figsize=(20, 6))    #setting  the scatterplot window size
 #Tenure vs Total Charges
 plt.subplot(1, 2, 1)  #this shows that my graph has 1 row, 2 columns and the last (1) means that this particular graph is 1st in the row
@@ -83,6 +98,14 @@ plt.title("Correlation Heatmap")
 plt.show()
 
 #Boxplots
+#how they differ
+# CHURNED CUSTOMERS HAVE: 
+# Lower tenure (shorter stay) 
+# Higher monthly charges
+#NON-CHURNED CUSTOMERS
+# Stay longer 
+# Have more stable/lower monthly charges
+ 
 plt.figure(figsize=(14, 6))
 #Tenure vs Churn
 plt.subplot(1, 2, 1) #row, 2 columns, 1st graph
@@ -94,6 +117,16 @@ plt.subplot(1, 2, 2) #1row, 2 columns, 2nd graph
 sns.boxplot(data=data, x='Churn', y='MonthlyCharges', hue = 'Churn', palette='Set2', legend=False) #distibution by churn
 plt.title('Monthly Charges Distribution by Churn')
 plt.show()
+
+# Important Features:  Tenure ,Monthly Charges,Total Charges  
+# Justification:  Strong correlations with churn, Clear separation in boxplots, Visible patterns in scatter plots
+
+#KEY INSIGHTS
+# Customers with low tenure are high churn risk 
+# High monthly charges increase churn likelihood 
+# Features show clear patterns which implies that they are good for prediction 
+# Some overlap exists  meaning not perfectly separable 
+
 
 #PART C:Training the model
 #Initiated my models in a dictionary
@@ -117,7 +150,10 @@ for machine, model in models.items():
     results[machine] = model.predict(X_test)
     training_time[machine] = stopping_time - starting_time
     
-    print(f"{machine} model trained in {training_time[machine]:.4f} seconds")
+    #printing out the prediction time
+    print(f"\n{machine} model trained in {training_time[machine]:.4f} seconds")
+    #printing out the model predictions
+    print(f"\n{machine} model prediction {results[machine]}")
 
 #comparing the models basing on time
 time_comparison = pd.Series(training_time).sort_values() #sorting models according to time
@@ -129,8 +165,13 @@ print("\nComparing models basing on prediction")
 pred_comparison = pd.DataFrame(results) #loads my results into dataframe or table 
 print(pred_comparison.head())
 
+#DIFFERENCES OBSERVED IN MODELS
+#k-NN varies depending on k (smaller k = more sensitive to noise). 
+# Decision Tree captures patterns but can overfit. 
+# Logistic Regression is more stable but simpler. 
 
 #PART D: Ensemble Learning
+
 #Hard voting
 hv = VotingClassifier(estimators=[('lr', LogisticRegression(max_iter=1000)), ('knn', KNeighborsClassifier()), ('dt', DecisionTreeClassifier())], voting='hard').fit(X_train, y_train)
 results['Hard Voting'] = hv.predict(X_test)  #increased iterations to 1000 to ensure convergence due to increased feature space from One-Hot Encoding
@@ -138,6 +179,10 @@ results['Hard Voting'] = hv.predict(X_test)  #increased iterations to 1000 to en
 #Soft voting
 sv = VotingClassifier(estimators=[('lr', LogisticRegression(max_iter=1000)), ('knn', KNeighborsClassifier()), ('dt', DecisionTreeClassifier())], voting='soft').fit(X_train, y_train)
 results['Soft Voting'] = sv.predict(X_test)   
+
+#HARD VS SOFT VOTING
+#Hard Voting: final prediction is based on majority vote. 
+# Soft Voting: uses probability averages for more informed decisions. 
 
 #Find number of differences
 differ = np.sum(results['Hard Voting'] != results['Soft Voting']) #adding up rows where these models had different predictions
@@ -168,6 +213,9 @@ comparison_df = pd.DataFrame(model_accuracy)
 print("\nComparison between Individual Models vs. Ensembles")
 print(comparison_df.sort_values(by='Accuracy', ascending=False).to_string(index=False))
 
+#Improvements
+# Ensemble methods generally improve accuracy. 
+# Stacking provides more flexibility by learning how to combine models. 
 
 
 #PART E: Evaluation
@@ -205,3 +253,15 @@ plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
 plt.grid(alpha=0.3)
 plt.show()
+
+# KEY OBSERVATIONS
+# Confusion matrix shows  correct vs incorrect predictions 
+# ROC curve compares model performance across thresholds. 
+# Key Observation:
+# Some models may struggle to correctly identify churn cases
+
+#Error pattern 
+# Customers with similar features  are harder to classify. 
+
+
+
