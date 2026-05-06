@@ -125,7 +125,7 @@ for machine, model in [("Linear Regression", lr_pred_units), ("Decision Tree", d
 pd.options.display.float_format = '{:.2f}'.format
 print("\nModel Comparison Table\n", pd.DataFrame(metrics))
 
-#Plot residuals for BOTH models
+#Plot residuals for both models
 plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1)
 sns.histplot(y_test - lr_pred, kde=True, color='blue')
