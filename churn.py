@@ -187,6 +187,8 @@ print(pd.DataFrame(metrics))
 #Confusion Matrix
 ConfusionMatrixDisplay.from_estimator(stack, X_test, y_test)
 plt.title("Confusion matrix showing the TP,FP,TN and FN")
+plt.xlabel("Predicted churns")
+plt.xlabel("Actual churns")
 plt.show()
 
 #ROC curve
@@ -199,5 +201,7 @@ RocCurveDisplay.from_estimator(models['DT'], X_test, y_test, ax=ax, name='Tree')
 RocCurveDisplay.from_estimator(sv, X_test, y_test, ax=ax, name='Soft Voting')
 
 plt.title("ROC Curve Comparison")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
 plt.grid(alpha=0.3)
 plt.show()
